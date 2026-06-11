@@ -7,7 +7,10 @@ authors = [
     { name = "l-dando", email = "luke.dando@hotmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "numpy>=2.4.6",
+    "pandas>=3.0.3",
+]
 
 [project.scripts]
 boostie = "boostie:main"
@@ -15,3 +18,9 @@ boostie = "boostie:main"
 [build-system]
 requires = ["uv_build>=0.11.19,<0.12.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+    "scikit-learn>=1.9.0",
+]

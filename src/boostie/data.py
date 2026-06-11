@@ -17,16 +17,16 @@ import numpy as np
 import pandas as pd
 from typing import Optional
 
-
 # -------------------------------------------------------
 # Dataset generators
 # -------------------------------------------------------
 
+
 def make_regression_data(
-    n_samples:  int   = 500,
-    n_features: int   = 5,
-    noise:      float = 0.5,
-    seed:       int   = 42,
+    n_samples: int = 500,
+    n_features: int = 5,
+    noise: float = 0.5,
+    seed: int = 42,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Create a synthetic regression dataset with a non-linear target.
@@ -51,7 +51,7 @@ def make_regression_data(
     rng = np.random.default_rng(seed)
     X = rng.standard_normal((n_samples, n_features))
     y = (
-        2.0  * X[:, 0]
+        2.0 * X[:, 0]
         - 1.5 * X[:, 1] ** 2
         + 0.5 * X[:, 2]
         + rng.standard_normal(n_samples) * noise
@@ -60,10 +60,10 @@ def make_regression_data(
 
 
 def make_classification_data(
-    n_samples:  int   = 500,
-    n_features: int   = 5,
-    noise:      float = 0.1,
-    seed:       int   = 42,
+    n_samples: int = 500,
+    n_features: int = 5,
+    noise: float = 0.1,
+    seed: int = 42,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Create a synthetic binary classification dataset.
@@ -88,10 +88,7 @@ def make_classification_data(
     rng = np.random.default_rng(seed)
     X = rng.standard_normal((n_samples, n_features))
     log_odds = (
-        1.5 * X[:, 0]
-        - X[:, 1]
-        + 0.5 * X[:, 2]
-        + rng.standard_normal(n_samples) * noise
+        1.5 * X[:, 0] - X[:, 1] + 0.5 * X[:, 2] + rng.standard_normal(n_samples) * noise
     )
     prob = 1.0 / (1.0 + np.exp(-log_odds))
     y = (rng.uniform(size=n_samples) < prob).astype(float)
@@ -99,9 +96,9 @@ def make_classification_data(
 
 
 def make_count_data(
-    n_samples:  int = 500,
+    n_samples: int = 500,
     n_features: int = 5,
-    seed:       int = 42,
+    seed: int = 42,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Create a synthetic Poisson count dataset.
@@ -133,12 +130,13 @@ def make_count_data(
 # Train / test split
 # -------------------------------------------------------
 
+
 def train_test_split(
-    X:          np.ndarray,
-    y:          np.ndarray,
-    test_size:  float = 0.2,
-    shuffle:    bool  = True,
-    seed:       int   = 42,
+    X: np.ndarray,
+    y: np.ndarray,
+    test_size: float = 0.2,
+    shuffle: bool = True,
+    seed: int = 42,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Split arrays into train and test subsets.
@@ -168,6 +166,7 @@ def train_test_split(
 # -------------------------------------------------------
 # Conversion helpers
 # -------------------------------------------------------
+
 
 def to_numpy(
     obj,

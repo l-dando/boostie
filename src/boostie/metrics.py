@@ -20,10 +20,10 @@ Functions
 from __future__ import annotations
 import numpy as np
 
-
 # -------------------------------------------------------
 # Regression metrics
 # -------------------------------------------------------
+
 
 def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
@@ -68,6 +68,7 @@ def r_squared(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 # -------------------------------------------------------
 # Classification metrics
 # -------------------------------------------------------
+
 
 def log_loss(y_true: np.ndarray, y_prob: np.ndarray, eps: float = 1e-15) -> float:
     """
@@ -170,9 +171,10 @@ def precision_recall(
     tn, fp, fn, tp = cm[0, 0], cm[0, 1], cm[1, 0], cm[1, 1]
 
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    recall    = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     f1 = (
         2.0 * precision * recall / (precision + recall)
-        if (precision + recall) > 0 else 0.0
+        if (precision + recall) > 0
+        else 0.0
     )
     return {"precision": precision, "recall": recall, "f1": f1}

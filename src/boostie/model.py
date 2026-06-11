@@ -43,11 +43,11 @@ from __future__ import annotations
 from typing import Optional
 import numpy as np
 
-from .tree import XGBoostTree
+from .tree import boosTree
 from .losses import get_objective
 
 
-class XGBoostModel:
+class boostieModel:
     """
     Gradient boosted trees — from-scratch XGBoost implementation.
 
@@ -78,26 +78,26 @@ class XGBoostModel:
 
     def __init__(
         self,
-        n_estimators:     int   = 100,
-        max_depth:        int   = 3,
-        learning_rate:    float = 0.1,
-        reg_lambda:       float = 1.0,
-        reg_gamma:        float = 0.0,
+        n_estimators: int = 100,
+        max_depth: int = 3,
+        learning_rate: float = 0.1,
+        reg_lambda: float = 1.0,
+        reg_gamma: float = 0.0,
         min_child_weight: float = 1.0,
-        objective:        str   = "regression",
+        objective: str = "regression",
         base_score: Optional[float] = None,
     ) -> None:
-        self.n_estimators     = n_estimators
-        self.max_depth        = max_depth
-        self.learning_rate    = learning_rate
-        self.reg_lambda       = reg_lambda
-        self.reg_gamma        = reg_gamma
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
+        self.learning_rate = learning_rate
+        self.reg_lambda = reg_lambda
+        self.reg_gamma = reg_gamma
         self.min_child_weight = min_child_weight
-        self.objective        = objective
-        self.base_score       = base_score
+        self.objective = objective
+        self.base_score = base_score
 
         # Set after fit()
-        self._trees:      list[XGBoostTree] = []
+        self._trees: list[boosTree] = []
         self._base_score: float = 0.0
         self._grad_fn = get_objective(objective)
 
@@ -107,11 +107,11 @@ class XGBoostModel:
 
     def fit(
         self,
-        X:       np.ndarray,
-        y:       np.ndarray,
+        X: np.ndarray,
+        y: np.ndarray,
         verbose: bool = False,
         log_every: int = 10,
-    ) -> "XGBoostModel":
+    ) -> "boostieModel":
         """
         Train the model on (X, y).
 
@@ -141,11 +141,11 @@ class XGBoostModel:
         for t in range(self.n_estimators):
             g, h = self._grad_fn(y, y_pred)
 
-            tree = XGBoostTree(
-                max_depth        = self.max_depth,
-                reg_lambda       = self.reg_lambda,
-                reg_gamma        = self.reg_gamma,
-                min_child_weight = self.min_child_weight,
+            tree = boosTree(
+                max_depth=self.max_depth,
+                reg_lambda=self.reg_lambda,
+                reg_gamma=self.reg_gamma,
+                min_child_weight=self.min_child_weight,
             )
             tree.fit(X, g, h)
 
@@ -154,8 +154,10 @@ class XGBoostModel:
 
             if verbose and (t + 1) % log_every == 0:
                 loss = self._training_loss(y, y_pred)
-                print(f"  [round {t+1:>4d}/{self.n_estimators}]  "
-                      f"train loss: {loss:.6f}")
+                print(
+                    f"  [round {t+1:>4d}/{self.n_estimators}]  "
+                    f"train loss: {loss:.6f}"
+                )
 
         return self
 
@@ -201,9 +203,7 @@ class XGBoostModel:
         Raises ValueError for non-binary objectives.
         """
         if self.objective != "binary":
-            raise ValueError(
-                "predict_proba is only available for objective='binary'."
-            )
+            raise ValueError("predict_proba is only available for objective='binary'.")
         prob = self.predict(X)
         return np.column_stack([1 - prob, prob])
 
@@ -251,21 +251,19 @@ class XGBoostModel:
     def _apply_link(self, raw: np.ndarray) -> np.ndarray:
         """Apply the inverse link function to raw margin scores."""
         if self.objective == "binary":
-            return 1.0 / (1.0 + np.exp(-raw))     # sigmoid
+            return 1.0 / (1.0 + np.exp(-raw))  # sigmoid
         if self.objective == "poisson":
-            return np.exp(raw)                      # log link
-        return raw                                  # identity (regression)
+            return np.exp(raw)  # log link
+        return raw  # identity (regression)
 
     def _training_loss(self, y: np.ndarray, y_pred: np.ndarray) -> float:
         """Scalar training loss for logging. Uses MSE for all objectives."""
         g, _ = self._grad_fn(y, y_pred)
-        return float(np.mean(g ** 2))
+        return float(np.mean(g**2))
 
     def _check_fitted(self) -> None:
         if not self._trees:
-            raise RuntimeError(
-                "Model has not been fitted yet. Call fit() first."
-            )
+            raise RuntimeError("Model has not been fitted yet. Call fit() first.")
 
     def __repr__(self) -> str:
         return (

@@ -27,7 +27,6 @@ Supported objectives
 from __future__ import annotations
 import numpy as np
 
-
 # -------------------------------------------------------
 # Squared-error (regression)
 # -------------------------------------------------------
@@ -35,6 +34,7 @@ import numpy as np
 # g    = ŷ − y          (the plain residual)
 # h    = 1              (constant hessian)
 # -------------------------------------------------------
+
 
 def squared_error_gradients(
     y: np.ndarray,
@@ -69,6 +69,7 @@ def squared_error_gradients(
 # h    = p (1 − p)      (variance of Bernoulli)
 # -------------------------------------------------------
 
+
 def log_loss_gradients(
     y: np.ndarray,
     y_pred: np.ndarray,
@@ -86,7 +87,7 @@ def log_loss_gradients(
     g : first-order gradients, shape (n,)
     h : second-order gradients (hessians), shape (n,)
     """
-    prob = 1.0 / (1.0 + np.exp(-y_pred))   # sigmoid
+    prob = 1.0 / (1.0 + np.exp(-y_pred))  # sigmoid
     g = prob - y
     h = prob * (1.0 - prob)
     # Clip h away from zero to avoid division issues in leaves
@@ -104,6 +105,7 @@ def log_loss_gradients(
 # g    = exp(y_pred) − y   =  μ − y
 # h    = exp(y_pred)        =  μ
 # -------------------------------------------------------
+
 
 def poisson_gradients(
     y: np.ndarray,
@@ -136,8 +138,8 @@ def poisson_gradients(
 
 OBJECTIVES: dict[str, callable] = {
     "regression": squared_error_gradients,
-    "binary":     log_loss_gradients,
-    "poisson":    poisson_gradients,
+    "binary": log_loss_gradients,
+    "poisson": poisson_gradients,
 }
 
 
@@ -159,7 +161,6 @@ def get_objective(name: str) -> callable:
     """
     if name not in OBJECTIVES:
         raise ValueError(
-            f"Unknown objective '{name}'. "
-            f"Available: {list(OBJECTIVES.keys())}"
+            f"Unknown objective '{name}'. " f"Available: {list(OBJECTIVES.keys())}"
         )
     return OBJECTIVES[name]

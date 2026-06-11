@@ -56,7 +56,7 @@ def leaf_score(g_sum: float, h_sum: float, reg_lambda: float) -> float:
     -------
     float — the structural score (always ≥ 0)
     """
-    return (g_sum ** 2) / (h_sum + reg_lambda)
+    return (g_sum**2) / (h_sum + reg_lambda)
 
 
 def optimal_weight(g_sum: float, h_sum: float, reg_lambda: float) -> float:
@@ -82,14 +82,14 @@ def optimal_weight(g_sum: float, h_sum: float, reg_lambda: float) -> float:
 
 
 def split_gain(
-    g_left:  float,
-    h_left:  float,
+    g_left: float,
+    h_left: float,
     g_right: float,
     h_right: float,
     g_parent: float,
     h_parent: float,
     reg_lambda: float,
-    reg_gamma:  float,
+    reg_gamma: float,
 ) -> float:
     """
     Information gain from splitting a node into two children.
@@ -112,7 +112,7 @@ def split_gain(
     -------
     float — the split gain (use > 0 as the acceptance criterion)
     """
-    score_left   = leaf_score(g_left,   h_left,   reg_lambda)
-    score_right  = leaf_score(g_right,  h_right,  reg_lambda)
+    score_left = leaf_score(g_left, h_left, reg_lambda)
+    score_right = leaf_score(g_right, h_right, reg_lambda)
     score_parent = leaf_score(g_parent, h_parent, reg_lambda)
     return 0.5 * (score_left + score_right - score_parent) - reg_gamma

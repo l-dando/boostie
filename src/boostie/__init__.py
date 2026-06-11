@@ -15,14 +15,14 @@ Package layout
   main.py        — end-to-end worked examples
 """
 
-from .model import XGBoostModel
-from .tree import XGBoostTree, TreeNode
+from .model import boostieModel
+from .tree import boosTree, TreeNode
 from .losses import OBJECTIVES, get_objective
 from .metrics import rmse, log_loss, accuracy
 
 __all__ = [
-    "XGBoostModel",
-    "XGBoostTree",
+    "boostieModel",
+    "boosTree",
     "TreeNode",
     "OBJECTIVES",
     "get_objective",

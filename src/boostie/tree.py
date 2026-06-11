@@ -32,10 +32,10 @@ import numpy as np
 
 from .math_utils import leaf_score, optimal_weight, split_gain
 
-
 # -------------------------------------------------------
 # TreeNode
 # -------------------------------------------------------
+
 
 class TreeNode:
     """
@@ -49,11 +49,11 @@ class TreeNode:
     __slots__ = ("feature_index", "threshold", "left", "right", "leaf_value")
 
     def __init__(self) -> None:
-        self.feature_index: Optional[int]        = None
-        self.threshold:     Optional[float]      = None
-        self.left:          Optional[TreeNode]   = None
-        self.right:         Optional[TreeNode]   = None
-        self.leaf_value:    Optional[float]      = None
+        self.feature_index: Optional[int] = None
+        self.threshold: Optional[float] = None
+        self.left: Optional[TreeNode] = None
+        self.right: Optional[TreeNode] = None
+        self.leaf_value: Optional[float] = None
 
     def is_leaf(self) -> bool:
         """True if this node holds a prediction (no children)."""
@@ -62,17 +62,15 @@ class TreeNode:
     def __repr__(self) -> str:
         if self.is_leaf():
             return f"TreeNode(leaf={self.leaf_value:.4f})"
-        return (
-            f"TreeNode(feat={self.feature_index}, "
-            f"thresh={self.threshold:.4f})"
-        )
+        return f"TreeNode(feat={self.feature_index}, " f"thresh={self.threshold:.4f})"
 
 
 # -------------------------------------------------------
 # XGBoostTree
 # -------------------------------------------------------
 
-class XGBoostTree:
+
+class boosTree:
     """
     A single regression tree trained with XGBoost's exact greedy
     split-finding algorithm.
@@ -99,14 +97,14 @@ class XGBoostTree:
 
     def __init__(
         self,
-        max_depth:        int   = 3,
-        reg_lambda:       float = 1.0,
-        reg_gamma:        float = 0.0,
+        max_depth: int = 3,
+        reg_lambda: float = 1.0,
+        reg_gamma: float = 0.0,
         min_child_weight: float = 1.0,
     ) -> None:
-        self.max_depth        = max_depth
-        self.reg_lambda       = reg_lambda
-        self.reg_gamma        = reg_gamma
+        self.max_depth = max_depth
+        self.reg_lambda = reg_lambda
+        self.reg_gamma = reg_gamma
         self.min_child_weight = min_child_weight
         self.root: Optional[TreeNode] = None
 
@@ -158,9 +156,9 @@ class XGBoostTree:
 
     def _grow(
         self,
-        X:     np.ndarray,
-        g:     np.ndarray,
-        h:     np.ndarray,
+        X: np.ndarray,
+        g: np.ndarray,
+        h: np.ndarray,
         depth: int,
     ) -> TreeNode:
         """Recursively grow the tree and return the root node."""
@@ -181,12 +179,12 @@ class XGBoostTree:
 
         # ---- Apply the split and recurse ----
         feat_idx, threshold = best
-        left_mask  = X[:, feat_idx] <= threshold
+        left_mask = X[:, feat_idx] <= threshold
         right_mask = ~left_mask
 
         node.feature_index = feat_idx
-        node.threshold     = threshold
-        node.left  = self._grow(X[left_mask],  g[left_mask],  h[left_mask],  depth + 1)
+        node.threshold = threshold
+        node.left = self._grow(X[left_mask], g[left_mask], h[left_mask], depth + 1)
         node.right = self._grow(X[right_mask], g[right_mask], h[right_mask], depth + 1)
         return node
 
@@ -202,46 +200,50 @@ class XGBoostTree:
 
         Returns None if no valid split exists.
         """
-        best_gain      = 0.0          # must beat 0 (already includes -γ via split_gain)
-        best_feature   = None
+        best_gain = 0.0  # must beat 0 (already includes -γ via split_gain)
+        best_feature = None
         best_threshold = None
 
         g_parent = g.sum()
         h_parent = h.sum()
 
         for feat in range(X.shape[1]):
-            order    = np.argsort(X[:, feat])
+            order = np.argsort(X[:, feat])
             x_sorted = X[order, feat]
             g_sorted = g[order]
             h_sorted = h[order]
 
-            g_left, h_left   = 0.0, 0.0
+            g_left, h_left = 0.0, 0.0
             g_right, h_right = g_parent, h_parent
 
             for i in range(len(g_sorted) - 1):
-                g_left  += g_sorted[i];  h_left  += h_sorted[i]
-                g_right -= g_sorted[i];  h_right -= h_sorted[i]
+                g_left += g_sorted[i]
+                h_left += h_sorted[i]
+                g_right -= g_sorted[i]
+                h_right -= h_sorted[i]
 
                 # No split between identical feature values
                 if x_sorted[i] == x_sorted[i + 1]:
                     continue
 
                 # Guard against under-populated children
-                if (h_left  < self.min_child_weight or
-                        h_right < self.min_child_weight):
+                if h_left < self.min_child_weight or h_right < self.min_child_weight:
                     continue
 
                 gain = split_gain(
-                    g_left, h_left,
-                    g_right, h_right,
-                    g_parent, h_parent,
+                    g_left,
+                    h_left,
+                    g_right,
+                    h_right,
+                    g_parent,
+                    h_parent,
                     self.reg_lambda,
                     self.reg_gamma,
                 )
 
                 if gain > best_gain:
-                    best_gain      = gain
-                    best_feature   = feat
+                    best_gain = gain
+                    best_feature = feat
                     best_threshold = (x_sorted[i] + x_sorted[i + 1]) / 2.0
 
         if best_feature is None:
@@ -266,20 +268,24 @@ class XGBoostTree:
 
     def depth(self) -> int:
         """Return the actual depth of the fitted tree."""
+
         def _depth(node: Optional[TreeNode]) -> int:
             if node is None or node.is_leaf():
                 return 0
             return 1 + max(_depth(node.left), _depth(node.right))
+
         return _depth(self.root)
 
     def n_leaves(self) -> int:
         """Return the number of leaf nodes."""
+
         def _count(node: Optional[TreeNode]) -> int:
             if node is None:
                 return 0
             if node.is_leaf():
                 return 1
             return _count(node.left) + _count(node.right)
+
         return _count(self.root)
 
     def __repr__(self) -> str:

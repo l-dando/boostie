@@ -24,7 +24,6 @@ Supported objectives
   'poisson'     — Poisson log-likelihood, for count targets (y ≥ 0)
 """
 
-from __future__ import annotations
 import numpy as np
 
 # -------------------------------------------------------
@@ -139,6 +138,7 @@ def poisson_gradients(
 OBJECTIVES: dict[str, callable] = {
     "regression": squared_error_gradients,
     "binary": log_loss_gradients,
+    "classification": log_loss_gradients,  # alias for binary
     "poisson": poisson_gradients,
 }
 

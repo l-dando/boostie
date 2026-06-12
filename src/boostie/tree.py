@@ -26,11 +26,10 @@ For each node at depth d:
 Leaf values are the closed-form optimal weights w* from math_utils.
 """
 
-from __future__ import annotations
 from typing import Optional
 import numpy as np
 
-from .math_utils import leaf_score, optimal_weight, split_gain
+from .math_utils import optimal_weight, split_gain
 
 # -------------------------------------------------------
 # TreeNode
@@ -117,7 +116,7 @@ class boosTree:
         X: np.ndarray,
         g: np.ndarray,
         h: np.ndarray,
-    ) -> "XGBoostTree":
+    ) -> "boosTree":
         """
         Grow the tree to fit the gradient signal (g, h).
 
@@ -290,9 +289,9 @@ class boosTree:
 
     def __repr__(self) -> str:
         if self.root is None:
-            return "XGBoostTree(unfitted)"
+            return "boosTree(unfitted)"
         return (
-            f"XGBoostTree(depth={self.depth()}, "
+            f"boosTree(depth={self.depth()}, "
             f"leaves={self.n_leaves()}, "
             f"lambda={self.reg_lambda}, "
             f"gamma={self.reg_gamma})"

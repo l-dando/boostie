@@ -39,7 +39,6 @@ Usage
     preds = model.predict(X_test)
 """
 
-from __future__ import annotations
 from typing import Optional
 import numpy as np
 
@@ -250,7 +249,7 @@ class boostieModel:
 
     def _apply_link(self, raw: np.ndarray) -> np.ndarray:
         """Apply the inverse link function to raw margin scores."""
-        if self.objective == "binary":
+        if self.objective in ["binary", "classification"]:
             return 1.0 / (1.0 + np.exp(-raw))  # sigmoid
         if self.objective == "poisson":
             return np.exp(raw)  # log link

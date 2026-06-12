@@ -17,7 +17,6 @@ Functions
   precision_recall  — precision and recall (binary)
 """
 
-from __future__ import annotations
 import numpy as np
 
 # -------------------------------------------------------

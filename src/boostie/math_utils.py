@@ -33,7 +33,6 @@ These three formulas — leaf_score, optimal_weight, split_gain —
 are all that the tree-growing algorithm needs from the maths layer.
 """
 
-from __future__ import annotations
 import numpy as np
 
 

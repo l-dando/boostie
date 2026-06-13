@@ -44,6 +44,7 @@ import numpy as np
 
 from .tree import boosTree
 from .losses import get_objective
+from .preprocessors import get_preprocesser
 
 
 class boostieModel:
@@ -99,6 +100,43 @@ class boostieModel:
         self._trees: list[boosTree] = []
         self._base_score: float = 0.0
         self._grad_fn = get_objective(objective)
+
+    # ------------------------------------------------------------------
+    # Preprocessing
+    # ------------------------------------------------------------------
+
+    def preprocess(
+        self,
+        X: np.ndarray,
+        feature: dict = {str: str},
+        inplace: bool = True,
+    ) -> "boostieModel":
+        """
+        Define what columns should be preprocessed and how by calling different preprocessing functions.
+
+        Parameters
+        ----------
+        X         : feature matrix, shape (n_samples, n_features)
+        feature   : dictionary defining the feature to preprocess and the preprocessing function to apply
+        inplace   : if True, modify X in place; otherwise, return a new array
+
+        Returns
+        -------
+        self (for chaining)
+        """
+
+        self.preprocessor = get_preprocesser(feature.values()[0])
+
+        ohe, cols = self.preprocessor(X, feature.keys()[0])
+
+        # Remove the original column and add the new columns
+        if inplace:
+            # X = np.delete(X, col_index, axis=1)
+            pass
+        X = np.hstack((X, ohe))
+
+
+        return self
 
     # ------------------------------------------------------------------
     # Fitting

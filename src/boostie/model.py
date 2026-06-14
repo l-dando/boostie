@@ -41,6 +41,7 @@ Usage
 
 from typing import Optional
 import numpy as np
+import pandas as pd
 
 from .tree import boosTree
 from .losses import get_objective
@@ -144,10 +145,11 @@ class boostieModel:
 
     def fit(
         self,
-        X: np.ndarray,
-        y: np.ndarray,
+        X: np.ndarray | pd.DataFrame,
+        y: np.ndarray | pd.Series,
         verbose: bool = False,
         log_every: int = 10,
+        feature_names: Optional[list[str]] = None,
     ) -> "boostieModel":
         """
         Train the model on (X, y).
@@ -155,7 +157,9 @@ class boostieModel:
         Parameters
         ----------
         X         : feature matrix, shape (n_samples, n_features)
+                    Can be a NumPy array or a pandas DataFrame.
         y         : target vector,  shape (n_samples,)
+                    Can be a NumPy array or a pandas Series.
         verbose   : if True, print training loss every `log_every` rounds
         log_every : print interval when verbose=True
 
@@ -165,6 +169,17 @@ class boostieModel:
         """
         self._trees = []
 
+        if isinstance(X, pd.DataFrame):
+            if feature_names is None:
+                feature_names = list(X.columns)
+            self.feature_names = feature_names
+            X = X.values
+        if isinstance(y, pd.Series):
+            y = y.values
+        if isinstance(X, np.ndarray):
+            if feature_names is None:
+                self.feature_names = [f"feature {i}" for i in range(X.shape[1])]
+
         # Determine initial prediction
         if self.base_score is not None:
             self._base_score = float(self.base_score)
@@ -172,6 +187,7 @@ class boostieModel:
             self._base_score = float(np.mean(y))
         else:
             self._base_score = 0.0
+
 
         y_pred = np.full(len(y), fill_value=self._base_score, dtype=float)
 
@@ -202,7 +218,7 @@ class boostieModel:
     # Prediction
     # ------------------------------------------------------------------
 
-    def predict_raw(self, X: np.ndarray) -> np.ndarray:
+    def predict_raw(self, X: np.ndarray | pd.DataFrame) -> np.ndarray | pd.Series:
         """
         Return raw margin scores before the link function.
 
@@ -210,6 +226,9 @@ class boostieModel:
         to apply your own post-processing.
         """
         self._check_fitted()
+
+        if isinstance(X, pd.DataFrame):
+            X = X.values
         y_pred = np.full(X.shape[0], fill_value=self._base_score, dtype=float)
         for tree in self._trees:
             y_pred += self.learning_rate * tree.predict(X)
@@ -231,6 +250,8 @@ class boostieModel:
         -------
         predictions : np.ndarray, shape (n_samples,)
         """
+        if isinstance(X, pd.DataFrame):
+            X = X.values
         raw = self.predict_raw(X)
         return self._apply_link(raw)
 

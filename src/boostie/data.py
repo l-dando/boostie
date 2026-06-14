@@ -131,8 +131,8 @@ def make_count_data(
 
 
 def train_test_split(
-    X: np.ndarray,
-    y: np.ndarray,
+    X: np.ndarray | pd.DataFrame,
+    y: np.ndarray | pd.Series,
     test_size: float = 0.2,
     shuffle: bool = True,
     seed: int = 42,
@@ -152,6 +152,16 @@ def train_test_split(
     -------
     X_train, X_test, y_train, y_test
     """
+
+
+    df_in_flag = False
+    if isinstance(X, pd.DataFrame):
+        feature_names = list(X.columns)
+        X = X.to_numpy()
+        df_in_flag = True
+    if isinstance(y, pd.Series):
+        y = y.to_numpy()
+
     n = len(y)
     idx = np.arange(n)
     if shuffle:
@@ -159,7 +169,19 @@ def train_test_split(
         rng.shuffle(idx)
     split = int(n * (1.0 - test_size))
     train_idx, test_idx = idx[:split], idx[split:]
-    return X[train_idx], X[test_idx], y[train_idx], y[test_idx]
+
+    if df_in_flag:
+        X_train = pd.DataFrame(X[train_idx], columns=feature_names)
+        X_test = pd.DataFrame(X[test_idx], columns=feature_names)
+        y_train = pd.Series(y[train_idx])
+        y_test = pd.Series(y[test_idx])
+    else:
+        X_train = X[train_idx]
+        X_test = X[test_idx]
+        y_train = y[train_idx]
+        y_test = y[test_idx]
+
+    return X_train, X_test, y_train, y_test
 
 
 # -------------------------------------------------------

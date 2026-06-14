@@ -110,7 +110,7 @@ class boostieModel:
         self,
         X: np.ndarray,
         feature: dict = {str: str},
-        inplace: bool = True,
+        # inplace: bool = True,
     ) -> "boostieModel":
         """
         Define what columns should be preprocessed and how by calling different preprocessing functions.
@@ -126,18 +126,13 @@ class boostieModel:
         self (for chaining)
         """
 
-        self.preprocessor = get_preprocesser(feature.values()[0])
-
-        ohe, cols = self.preprocessor(X, feature.keys()[0])
-
-        # Remove the original column and add the new columns
-        if inplace:
-            # X = np.delete(X, col_index, axis=1)
-            pass
-        X = np.hstack((X, ohe))
+        self.preprocessor = get_preprocesser(list(feature.values())[0])
+        to_process = X[list(feature.keys())[0]]
+        ohe, cols = self.preprocessor(to_process, list(feature.keys())[0])
 
 
-        return self
+
+        return ohe, cols
 
     # ------------------------------------------------------------------
     # Fitting

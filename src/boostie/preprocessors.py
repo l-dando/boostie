@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 def one_hot_encoding(X: np.array, col_name: str) -> tuple[np.ndarray, list[str]]:
     """
@@ -6,22 +7,26 @@ def one_hot_encoding(X: np.array, col_name: str) -> tuple[np.ndarray, list[str]]
 
     Parameters
     ----------
-    X : feature matrix, shape (n_samples, n_features)
+    X : feature matrix, shape (n_samples, n_features) or pd.Series
     col_name : name of the categorical column to encode
 
     Returns
     -------
     X_encoded : one-hot encoded feature matrix, shape (n_samples, n_encoded_features)
     """
-    unique, inverse = np.unique(X, return_inverse=True)
-    ohe = np.eye(unique.shape[0])[inverse]
+    categories, inverse = np.unique(X, return_inverse=True)
+    one_hot = np.zeros((X.size, categories.size))
+    one_hot[np.arange(X.size), inverse] = 1
 
-    unique_vals = list(set(X))
+    unique_vals = []
+    for item in X:
+        if item not in unique_vals:
+            unique_vals.append(item)
     cols = []
     for val in unique_vals:
         cols.append(f"{col_name}_{val}")
 
-    return ohe, cols
+    return one_hot, cols
 
 
 # -------------------------------------------------------

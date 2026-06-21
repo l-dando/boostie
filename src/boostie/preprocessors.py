@@ -51,9 +51,12 @@ def label_encoder(X: np.array, col_name: str, **kwargs) -> tuple[np.ndarray, lis
     -------
     X_encoded : label encoded feature matrix, shape (n_samples, 1)
     """
-    X[X.isnull()] = "_missing"
-    encoded = np.unique(np.array(X), return_inverse=True)[1].reshape(-1, 1).T
+    series = pd.Series(np.asarray(X, dtype=object))
+    filled = series.where(series.notna(), "_missing")
+    codes, _ = pd.factorize(filled, sort=False)
+    encoded = codes.reshape(-1, 1)
 
+    return encoded, [f"{col_name}_label_encoded"]
     return encoded.T, [f"{col_name}_label_encoded"]
 
 

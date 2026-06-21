@@ -130,18 +130,18 @@ class boostieModel:
         for i in range(len(feature)):
             self.preprocessor = get_preprocesser(list(feature.values())[i])
             to_process = X[list(feature.keys())[i]]
-            ohe, cols = self.preprocessor(to_process, list(feature.keys())[i], dropna=dropna)
+            vals, cols = self.preprocessor(to_process, list(feature.keys())[i], dropna=dropna)
 
             if inplace:
                 # Replace the original column with the one-hot encoded columns
                 X_new = np.delete(X, list(X.columns).index(list(feature.keys())[i]), axis=1)
-                X_new = np.hstack((X_new, ohe))
+                X_new = np.hstack((X_new, vals))
                 cols_new = list(X.columns) + cols
                 cols_new.remove(list(feature.keys())[i])  # Remove the original column name
                 X = pd.DataFrame(X_new, columns=cols_new)
             else:
                 # Return a new array with the one-hot encoded columns
-                X_new = np.hstack((X, ohe))
+                X_new = np.hstack((X, vals))
                 cols_new = list(X.columns) + cols
                 X = pd.DataFrame(X_new, columns=cols_new)
         

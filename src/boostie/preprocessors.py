@@ -38,6 +38,25 @@ def one_hot_encoding(X: np.array, col_name: str, dropna: bool = False) -> tuple[
     return one_hot, cols
 
 
+def label_encoder(X: np.array, col_name: str, **kwargs) -> tuple[np.ndarray, list[str]]:
+    """
+    Label encode categorical features in the dataset.
+
+    Parameters
+    ----------
+    X : feature matrix, shape (n_samples, n_features) or pd.Series
+    col_name : name of the categorical column to encode
+
+    Returns
+    -------
+    X_encoded : label encoded feature matrix, shape (n_samples, 1)
+    """
+    X[X.isnull()] = "_missing"
+    encoded = np.unique(np.array(X), return_inverse=True)[1].reshape(-1, 1).T
+
+    return encoded.T, [f"{col_name}_label_encoded"]
+
+
 # -------------------------------------------------------
 # Registry
 # -------------------------------------------------------
@@ -46,6 +65,7 @@ def one_hot_encoding(X: np.array, col_name: str, dropna: bool = False) -> tuple[
 
 PREPROCESSORS: dict[str, callable] = {
     "one_hot_encoding": one_hot_encoding,
+    "label_encoder": label_encoder,
 }
 
 

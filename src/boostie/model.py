@@ -110,8 +110,10 @@ class boostieModel:
         self,
         X: np.ndarray,
         feature: dict = {str: str},
-        # inplace: bool = True,
-    ) -> "boostieModel":
+        inplace: bool = False,
+        dropna: bool = False,
+        return_df: bool = True,
+    ) -> tuple[np.ndarray, list[str]] | pd.DataFrame:
         """
         Define what columns should be preprocessed and how by calling different preprocessing functions.
 
@@ -125,14 +127,30 @@ class boostieModel:
         -------
         self (for chaining)
         """
+        for i in range(len(feature)):
+            self.preprocessor = get_preprocesser(list(feature.values())[i])
+            to_process = X[list(feature.keys())[i]]
+            ohe, cols = self.preprocessor(to_process, list(feature.keys())[i], dropna=dropna)
 
-        self.preprocessor = get_preprocesser(list(feature.values())[0])
-        to_process = X[list(feature.keys())[0]]
-        ohe, cols = self.preprocessor(to_process, list(feature.keys())[0])
+            if inplace:
+                # Replace the original column with the one-hot encoded columns
+                X_new = np.delete(X, list(X.columns).index(list(feature.keys())[i]), axis=1)
+                X_new = np.hstack((X_new, ohe))
+                cols_new = list(X.columns) + cols
+                cols_new.remove(list(feature.keys())[i])  # Remove the original column name
+                X = pd.DataFrame(X_new, columns=cols_new)
+            else:
+                # Return a new array with the one-hot encoded columns
+                X_new = np.hstack((X, ohe))
+                cols_new = list(X.columns) + cols
+                X = pd.DataFrame(X_new, columns=cols_new)
+        
+        if return_df:
+            return X
+        else:
+            return X.values, list(X.columns)
 
-
-
-        return ohe, cols
+        
 
     # ------------------------------------------------------------------
     # Fitting

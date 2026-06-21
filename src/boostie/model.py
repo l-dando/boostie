@@ -108,8 +108,8 @@ class boostieModel:
 
     def preprocess(
         self,
-        X: np.ndarray,
-        feature: dict = {str: str},
+        X: np.ndarray | pd.DataFrame,
+        feature: dict[str, str] | None = None,
         inplace: bool = False,
         dropna: bool = False,
         return_df: bool = True,

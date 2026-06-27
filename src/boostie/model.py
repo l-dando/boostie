@@ -372,12 +372,14 @@ class boostieModel:
             raise RuntimeError("Model has not been fitted yet. Call fit() first.")
 
     def __repr__(self) -> str:
+        fitted = "fitted" if self._trees else "not fitted"
         return (
-            f"XGBoostModel("
+            f"BoostieModel("
             f"objective={self.objective!r}, "
             f"n_estimators={self.n_estimators}, "
             f"max_depth={self.max_depth}, "
             f"lr={self.learning_rate}, "
             f"lambda={self.reg_lambda}, "
-            f"gamma={self.reg_gamma})"
+            f"gamma={self.reg_gamma}, "
+            f"status={fitted})"
         )

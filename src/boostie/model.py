@@ -70,9 +70,10 @@ class boostieModel:
         Minimum sum of hessians in a child node.
     objective : str, default 'regression'
         Loss function to optimise. One of:
-          'regression' — mean squared error
-          'binary'     — binary cross-entropy
-          'poisson'    — Poisson log-likelihood
+          'regression' - mean squared error
+          'binary'     - binary cross-entropy
+          'poisson'    - Poisson log-likelihood
+          'tweedie'    - Tweedie
     base_score : float or None, default None
         Initial prediction for all samples before any tree is added.
         If None, defaults to mean(y) for regression and 0.0 for others.
@@ -88,6 +89,8 @@ class boostieModel:
         min_child_weight: float = 1.0,
         objective: str = "regression",
         base_score: Optional[float] = None,
+        tweedie_power: Optional[int] = 1.5
+
     ) -> None:
         self.n_estimators = n_estimators
         self.max_depth = max_depth
@@ -104,7 +107,7 @@ class boostieModel:
         self._grad_fn = get_objective(objective)
 
         if self._grad_fn is tweedie:
-            self.tweedie_power = 1.5  # default value for Tweedie power
+            self.tweedie_power = tweedie_power  # default value for Tweedie power
 
     # ------------------------------------------------------------------
     # Setting values

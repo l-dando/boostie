@@ -46,6 +46,7 @@ import pandas as pd
 from .tree import boosTree
 from .losses import get_objective
 from .preprocessors import get_preprocesser
+from .losses import tweedie
 
 
 class boostieModel:
@@ -101,6 +102,31 @@ class boostieModel:
         self._trees: list[boosTree] = []
         self._base_score: float = 0.0
         self._grad_fn = get_objective(objective)
+
+        if self._grad_fn is tweedie:
+            self.tweedie_power = 1.5  # default value for Tweedie power
+
+    # ------------------------------------------------------------------
+    # Setting values
+    # ------------------------------------------------------------------
+
+    def set_tweedie_power(self, p: float) -> None:
+        """
+        Set the Tweedie power parameter (p) for the Tweedie loss.
+
+        Parameters
+        ----------
+        p : float
+            Tweedie power parameter. Must be in the range (1, 2).
+            Common values:
+              p=1   → Poisson distribution
+              p=1.5 → Compound Poisson-Gamma distribution
+              p=2   → Gamma distribution
+        """
+        if not (1 < p < 2):
+            raise ValueError("Tweedie power parameter must be in the range (1, 2).")
+        self.tweedie_power = p
+
 
     # ------------------------------------------------------------------
     # Preprocessing
@@ -205,7 +231,10 @@ class boostieModel:
         y_pred = np.full(len(y), fill_value=self._base_score, dtype=float)
 
         for t in range(self.n_estimators):
-            g, h = self._grad_fn(y, y_pred)
+            if self._grad_fn is tweedie:
+                g, h = self._grad_fn(y, y_pred, p=self.tweedie_power)
+            else:
+                g, h = self._grad_fn(y, y_pred)
 
             tree = boosTree(
                 max_depth=self.max_depth,
@@ -323,13 +352,16 @@ class boostieModel:
         """Apply the inverse link function to raw margin scores."""
         if self.objective in ["binary", "classification"]:
             return 1.0 / (1.0 + np.exp(-raw))  # sigmoid
-        if self.objective == "poisson":
+        if self.objective in ["poisson", "tweedie"]:
             return np.exp(raw)  # log link
         return raw  # identity (regression)
 
     def _training_loss(self, y: np.ndarray, y_pred: np.ndarray) -> float:
         """Scalar training loss for logging. Uses MSE for all objectives."""
-        g, _ = self._grad_fn(y, y_pred)
+        if self._grad_fn is tweedie:
+            g, _ = self._grad_fn(y, y_pred, p=self.tweedie_power)
+        else:
+            g, _ = self._grad_fn(y, y_pred)
         return float(np.mean(g**2))
 
     def _check_fitted(self) -> None:

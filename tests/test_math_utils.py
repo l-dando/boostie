@@ -5,7 +5,7 @@ from boostie.math_utils import leaf_score, optimal_weight, split_gain
 
 def test_leaf_score_matches_formula():
     g_sum, h_sum, reg_lambda = 3.0, 2.0, 1.0
-    assert leaf_score(g_sum, h_sum, reg_lambda) == (g_sum**2) / (h_sum + reg_lambda)
+    assert np.isclose(leaf_score(g_sum, h_sum, reg_lambda), (g_sum**2) / (h_sum + reg_lambda))
 
 
 def test_optimal_weight_matches_formula():

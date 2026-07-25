@@ -23,3 +23,7 @@ build-backend = "uv_build"
 dev = [
     "ipykernel>=7.3.0",
 ]
+test = [
+    "pytest>=8.4.2",
+    "black>=25.1.0",
+]

@@ -30,3 +30,8 @@ __all__ = [
     "log_loss",
     "accuracy",
 ]
+
+
+def main() -> None:
+    """Console entry point for the `boostie` CLI."""
+    print("boostie is a Python package. Import `boostieModel` from `boostie` to use it.")

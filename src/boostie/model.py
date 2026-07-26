@@ -77,6 +77,13 @@ class boostieModel:
     base_score : float or None, default None
         Initial prediction for all samples before any tree is added.
         If None, defaults to mean(y) for regression and 0.0 for others.
+    tweedie_power : float, default 1.5
+        Tweedie power parameter (p). Only used when objective='tweedie'.
+        Must be in the range (1, 2).
+    early_stopping_rounds : int or None, default None
+        If set, training stops when the training loss has not improved
+        for this many consecutive rounds. If None, all n_estimators
+        rounds are run.
     """
 
     def __init__(

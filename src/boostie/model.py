@@ -90,6 +90,7 @@ class boostieModel:
         objective: str = "regression",
         base_score: Optional[float] = None,
         tweedie_power: float = 1.5,
+        early_stopping_rounds: Optional[int] = None,
 
     ) -> None:
         self.n_estimators = n_estimators
@@ -106,9 +107,11 @@ class boostieModel:
         self._base_score: float = 0.0
         self._grad_fn = get_objective(objective)
 
-        self.tweedie_power = 1.5
+        self.tweedie_power = tweedie_power
         if self._grad_fn is tweedie:
             self.set_tweedie_power(float(tweedie_power))
+
+        self.early_stopping_rounds = early_stopping_rounds
 
     # ------------------------------------------------------------------
     # Setting values
@@ -257,6 +260,18 @@ class boostieModel:
                     f"  [round {t+1:>4d}/{self.n_estimators}]  "
                     f"train loss: {loss:.6f}"
                 )
+
+            if t == 0:
+                best_loss = self._training_loss(y, y_pred)
+                best_round = 0
+            else:
+                current_loss = self._training_loss(y, y_pred)
+                if current_loss < best_loss:
+                    best_loss = current_loss
+                    best_round = t
+                if self.early_stopping_rounds is not None and t - best_round >= self.early_stopping_rounds:
+                    print(f"Early stopping at round {t+1}")
+                    break
 
         return self
 

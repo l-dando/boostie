@@ -220,8 +220,8 @@ class boostieModel:
             y = y.values
         if isinstance(X, np.ndarray):
             if feature_names is None:
-                self.feature_names = [f"feature {i}" for i in range(X.shape[1])]
-
+                feature_names = [f"feature {i}" for i in range(X.shape[1])]
+            self.feature_names = feature_names
         # Determine initial prediction
         if self.base_score is not None:
             self._base_score = float(self.base_score)

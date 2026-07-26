@@ -89,7 +89,7 @@ class boostieModel:
         min_child_weight: float = 1.0,
         objective: str = "regression",
         base_score: Optional[float] = None,
-        tweedie_power: Optional[int] = 1.5
+        tweedie_power: float = 1.5,
 
     ) -> None:
         self.n_estimators = n_estimators
@@ -106,8 +106,9 @@ class boostieModel:
         self._base_score: float = 0.0
         self._grad_fn = get_objective(objective)
 
+        self.tweedie_power = 1.5
         if self._grad_fn is tweedie:
-            self.tweedie_power = tweedie_power  # default value for Tweedie power
+            self.set_tweedie_power(float(tweedie_power))
 
     # ------------------------------------------------------------------
     # Setting values

@@ -1,0 +1,386 @@
+"""
+model.py
+========
+XGBoostModel — the full gradient boosting loop.
+
+How it works
+------------
+XGBoost builds an ensemble of trees additively.  At each round t:
+
+  1. Compute per-sample gradients g and hessians h from the
+     current predictions ŷ and the true labels y, using the
+     chosen loss function (objective).
+
+  2. Fit a new tree fₜ to (g, h) — the tree finds the split
+     pattern that best reduces the objective.
+
+  3. Update predictions:
+         ŷ  ←  ŷ  +  η · fₜ(x)
+     where η (learning_rate / eta) is a shrinkage factor that
+     prevents any single tree from dominating.
+
+After n_estimators rounds the model has learned to approximate
+the target via the sum of many shallow trees, each correcting
+the residual errors of those before it.
+
+Link functions (objective → final prediction)
+---------------------------------------------
+  'regression'  → identity      (raw score = prediction)
+  'binary'      → sigmoid       (raw score → probability)
+  'poisson'     → exp           (raw score → expected count)
+
+Usage
+-----
+    from xgboost_scratch.model import XGBoostModel
+
+    model = XGBoostModel(n_estimators=100, max_depth=4,
+                         learning_rate=0.1, objective='regression')
+    model.fit(X_train, y_train, verbose=True)
+    preds = model.predict(X_test)
+"""
+
+from typing import Optional
+import numpy as np
+import pandas as pd
+
+from .tree import boosTree
+from .losses import get_objective
+from .preprocessors import get_preprocesser
+from .losses import tweedie
+
+
+class boostieModel:
+    """
+    Gradient boosted trees — from-scratch XGBoost implementation.
+
+    Parameters
+    ----------
+    n_estimators : int, default 100
+        Number of boosting rounds (trees to build).
+    max_depth : int, default 3
+        Maximum depth of each tree.
+    learning_rate : float, default 0.1
+        Shrinkage factor η applied to each tree's output.
+        Lower values are more conservative and require more trees.
+    reg_lambda : float, default 1.0
+        L2 regularisation on leaf weights (λ).
+    reg_gamma : float, default 0.0
+        Minimum gain required to accept a split (γ).
+    min_child_weight : float, default 1.0
+        Minimum sum of hessians in a child node.
+    objective : str, default 'regression'
+        Loss function to optimise. One of:
+          'regression' - mean squared error
+          'binary'     - binary cross-entropy
+          'poisson'    - Poisson log-likelihood
+          'tweedie'    - Tweedie
+    base_score : float or None, default None
+        Initial prediction for all samples before any tree is added.
+        If None, defaults to mean(y) for regression and 0.0 for others.
+    """
+
+    def __init__(
+        self,
+        n_estimators: int = 100,
+        max_depth: int = 3,
+        learning_rate: float = 0.1,
+        reg_lambda: float = 1.0,
+        reg_gamma: float = 0.0,
+        min_child_weight: float = 1.0,
+        objective: str = "regression",
+        base_score: Optional[float] = None,
+        tweedie_power: float = 1.5,
+
+    ) -> None:
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
+        self.learning_rate = learning_rate
+        self.reg_lambda = reg_lambda
+        self.reg_gamma = reg_gamma
+        self.min_child_weight = min_child_weight
+        self.objective = objective
+        self.base_score = base_score
+
+        # Set after fit()
+        self._trees: list[boosTree] = []
+        self._base_score: float = 0.0
+        self._grad_fn = get_objective(objective)
+
+        self.tweedie_power = 1.5
+        if self._grad_fn is tweedie:
+            self.set_tweedie_power(float(tweedie_power))
+
+    # ------------------------------------------------------------------
+    # Setting values
+    # ------------------------------------------------------------------
+
+    def set_tweedie_power(self, p: float) -> None:
+        """
+        Set the Tweedie power parameter (p) for the Tweedie loss.
+
+        Parameters
+        ----------
+        p : float
+            Tweedie power parameter. Must be in the range (1, 2).
+            Common values:
+              p=1   → Poisson distribution
+              p=1.5 → Compound Poisson-Gamma distribution
+              p=2   → Gamma distribution
+        """
+        if not (1 < p < 2):
+            raise ValueError("Tweedie power parameter must be in the range (1, 2).")
+        self.tweedie_power = p
+
+
+    # ------------------------------------------------------------------
+    # Preprocessing
+    # ------------------------------------------------------------------
+
+    def preprocess(
+        self,
+        X: np.ndarray | pd.DataFrame,
+        feature: dict[str, str] | None = None,
+        inplace: bool = False,
+        dropna: bool = False,
+        return_df: bool = True,
+    ) -> tuple[np.ndarray, list[str]] | pd.DataFrame:
+        """
+        Define what columns should be preprocessed and how by calling different preprocessing functions.
+
+        Parameters
+        ----------
+        X         : feature matrix, shape (n_samples, n_features)
+        feature   : dictionary defining the feature to preprocess and the preprocessing function to apply
+        inplace   : if True, modify X in place; otherwise, return a new array
+
+        Returns
+        -------
+        self (for chaining)
+        """
+        for i in range(len(feature)):
+            self.preprocessor = get_preprocesser(list(feature.values())[i])
+            to_process = X[list(feature.keys())[i]]
+            vals, cols = self.preprocessor(to_process, list(feature.keys())[i], dropna=dropna)
+
+            if inplace:
+                # Replace the original column with the one-hot encoded columns
+                X_new = np.delete(X, list(X.columns).index(list(feature.keys())[i]), axis=1)
+                X_new = np.hstack((X_new, vals))
+                cols_new = list(X.columns) + cols
+                cols_new.remove(list(feature.keys())[i])  # Remove the original column name
+                X = pd.DataFrame(X_new, columns=cols_new)
+            else:
+                # Return a new array with the one-hot encoded columns
+                X_new = np.hstack((X, vals))
+                cols_new = list(X.columns) + cols
+                X = pd.DataFrame(X_new, columns=cols_new)
+        
+        if return_df:
+            return X
+        else:
+            return X.values, list(X.columns)
+
+        
+
+    # ------------------------------------------------------------------
+    # Fitting
+    # ------------------------------------------------------------------
+
+    def fit(
+        self,
+        X: np.ndarray | pd.DataFrame,
+        y: np.ndarray | pd.Series,
+        verbose: bool = False,
+        log_every: int = 10,
+        feature_names: Optional[list[str]] = None,
+    ) -> "boostieModel":
+        """
+        Train the model on (X, y).
+
+        Parameters
+        ----------
+        X         : feature matrix, shape (n_samples, n_features)
+                    Can be a NumPy array or a pandas DataFrame.
+        y         : target vector,  shape (n_samples,)
+                    Can be a NumPy array or a pandas Series.
+        verbose   : if True, print training loss every `log_every` rounds
+        log_every : print interval when verbose=True
+
+        Returns
+        -------
+        self (for chaining)
+        """
+        self._trees = []
+
+        if isinstance(X, pd.DataFrame):
+            if feature_names is None:
+                feature_names = list(X.columns)
+            self.feature_names = feature_names
+            X = X.values
+        if isinstance(y, pd.Series):
+            y = y.values
+        if isinstance(X, np.ndarray):
+            if feature_names is None:
+                feature_names = [f"feature {i}" for i in range(X.shape[1])]
+            self.feature_names = feature_names
+        # Determine initial prediction
+        if self.base_score is not None:
+            self._base_score = float(self.base_score)
+        elif self.objective == "regression":
+            self._base_score = float(np.mean(y))
+        else:
+            self._base_score = 0.0
+
+
+        y_pred = np.full(len(y), fill_value=self._base_score, dtype=float)
+
+        for t in range(self.n_estimators):
+            if self._grad_fn is tweedie:
+                g, h = self._grad_fn(y, y_pred, p=self.tweedie_power)
+            else:
+                g, h = self._grad_fn(y, y_pred)
+
+            tree = boosTree(
+                max_depth=self.max_depth,
+                reg_lambda=self.reg_lambda,
+                reg_gamma=self.reg_gamma,
+                min_child_weight=self.min_child_weight,
+            )
+            tree.fit(X, g, h)
+
+            y_pred += self.learning_rate * tree.predict(X)
+            self._trees.append(tree)
+
+            if verbose and (t + 1) % log_every == 0:
+                loss = self._training_loss(y, y_pred)
+                print(
+                    f"  [round {t+1:>4d}/{self.n_estimators}]  "
+                    f"train loss: {loss:.6f}"
+                )
+
+        return self
+
+    # ------------------------------------------------------------------
+    # Prediction
+    # ------------------------------------------------------------------
+
+    def predict_raw(self, X: np.ndarray | pd.DataFrame) -> np.ndarray | pd.Series:
+        """
+        Return raw margin scores before the link function.
+
+        Useful for inspecting the model internals or when you want
+        to apply your own post-processing.
+        """
+        self._check_fitted()
+
+        if isinstance(X, pd.DataFrame):
+            X = X.values
+        y_pred = np.full(X.shape[0], fill_value=self._base_score, dtype=float)
+        for tree in self._trees:
+            y_pred += self.learning_rate * tree.predict(X)
+        return y_pred
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """
+        Return final predictions (after the link function).
+
+          objective='regression' → raw scores (identity link)
+          objective='binary'     → probabilities in [0, 1]
+          objective='poisson'    → expected counts (≥ 0)
+
+        Parameters
+        ----------
+        X : feature matrix, shape (n_samples, n_features)
+
+        Returns
+        -------
+        predictions : np.ndarray, shape (n_samples,)
+        """
+        if isinstance(X, pd.DataFrame):
+            X = X.values
+        raw = self.predict_raw(X)
+        return self._apply_link(raw)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        """
+        For binary classification: return [P(y=0), P(y=1)] per sample.
+        Raises ValueError for non-binary objectives.
+        """
+        if self.objective != "binary":
+            raise ValueError("predict_proba is only available for objective='binary'.")
+        prob = self.predict(X)
+        return np.column_stack([1 - prob, prob])
+
+    # ------------------------------------------------------------------
+    # Inspection helpers
+    # ------------------------------------------------------------------
+
+    @property
+    def n_trees(self) -> int:
+        """Number of trees actually fitted."""
+        return len(self._trees)
+
+    def feature_importances(self, n_features: int) -> np.ndarray:
+        """
+        Compute feature importances as the total split gain contributed
+        by each feature across all trees (a.k.a. 'gain' importance).
+
+        Parameters
+        ----------
+        n_features : number of features in the training data
+
+        Returns
+        -------
+        importances : np.ndarray, shape (n_features,), sums to 1
+        """
+        self._check_fitted()
+        counts = np.zeros(n_features, dtype=float)
+        for tree in self._trees:
+            self._count_splits(tree.root, counts)
+        total = counts.sum()
+        return counts / total if total > 0 else counts
+
+    def _count_splits(self, node, counts: np.ndarray) -> None:
+        """Recursively count how many times each feature is used to split."""
+        if node is None or node.is_leaf():
+            return
+        counts[node.feature_index] += 1
+        self._count_splits(node.left, counts)
+        self._count_splits(node.right, counts)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _apply_link(self, raw: np.ndarray) -> np.ndarray:
+        """Apply the inverse link function to raw margin scores."""
+        if self.objective in ["binary", "classification"]:
+            return 1.0 / (1.0 + np.exp(-raw))  # sigmoid
+        if self.objective in ["poisson", "tweedie"]:
+            return np.exp(raw)  # log link
+        return raw  # identity (regression)
+
+    def _training_loss(self, y: np.ndarray, y_pred: np.ndarray) -> float:
+        """Scalar training loss for logging. Uses MSE for all objectives."""
+        if self._grad_fn is tweedie:
+            g, _ = self._grad_fn(y, y_pred, p=self.tweedie_power)
+        else:
+            g, _ = self._grad_fn(y, y_pred)
+        return float(np.mean(g**2))
+
+    def _check_fitted(self) -> None:
+        if not self._trees:
+            raise RuntimeError("Model has not been fitted yet. Call fit() first.")
+
+    def __repr__(self) -> str:
+        fitted = "fitted" if self._trees else "not fitted"
+        return (
+            f"BoostieModel("
+            f"objective={self.objective!r}, "
+            f"n_estimators={self.n_estimators}, "
+            f"max_depth={self.max_depth}, "
+            f"lr={self.learning_rate}, "
+            f"lambda={self.reg_lambda}, "
+            f"gamma={self.reg_gamma}, "
+            f"status={fitted})"
+        )

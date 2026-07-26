@@ -26,4 +26,5 @@ dev = [
 test = [
     "pytest>=8.4.2",
     "black>=25.1.0",
+    "hypothesis[numpy]>=6.0.0",
 ]
